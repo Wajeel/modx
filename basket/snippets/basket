@@ -1,0 +1,68 @@
+if(!class_exists("CShopBasket", false))
+{
+    class CShopBasket 
+    {
+        private static $instance;
+        public static function getInstance()
+        {
+            if(!self::$instance)
+            {
+                self::$instance = new self();
+            }
+            return self::$instance;
+        }
+        
+        private $modx;
+        public function __construct()
+        {
+            global $modx;
+            $this->modx = $modx;
+            
+            if(!array_key_exists("basketid", $_COOKIE))
+            {
+                $this->modx->query("INSERT INTO shop_userscookie (timestamp) VALUES (NULL)");
+                $_COOKIE["basketid"] = md5($this->modx->lastInsertId());
+                setcookie("basketid", $_COOKIE["basketid"], time()+2592000, "/");
+            }
+        }
+        
+        public static function isAjax()
+        {
+            return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest' && $_REQUEST['module'] == 'basket';
+        }
+        
+        public function add($objID, $count, $params)
+        {
+            $arrWhere = array(
+                "userid" => $_COOKIE['basketid'],
+                "objectid" => $objID,
+                "params" => json_encode($params)
+            );
+            
+        }       
+    }
+}
+
+if(isset($init) && $init == 'Y')
+{
+    CShopBasket::getInstance();
+}
+
+if(CShopBasket::isAjax())
+{
+    $CBasket = CShopBasket::getInstance();
+    switch($_REQUEST['action'])
+    {
+        case "add2basket":
+            
+            $CBasket->add($_REQUEST['item']['id'], $_REQUEST['item']['count'], array(
+                "sku" => $_REQUEST['item']['color'],
+                "size" => $_REQUEST['item']['size'],
+                "height" => $_REQUEST['item']['height']
+            ));
+            
+            
+            
+            break;
+    }
+}
